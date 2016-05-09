@@ -31,21 +31,23 @@ import utils.Pair;
 
 public class MyGdxGame extends InputAdapter implements ApplicationListener{
 	
-	final int FIELD_WIDTH = 16;
-	final int ROWS = 1;
+	final float radius = 50; // it will be counted in dependence of sides of the screen
+	final int FIELD_WIDTH = 12;
+	final int ROWS = 10;
 	final int CELL_WIDTH = 1000;
 	final int TUBE_HEIGHT_IN_BLOCKS = 6;
 	final int BLOCKS_PER_CHANGE_DELTA_Y = 5;
-	final float CELL_LENGTH = 10;
+	final float CELL_LENGTH = (float) Math.sqrt(5 * radius * Math.sin((180 / FIELD_WIDTH) 
+			* Math.PI / 180) * radius * Math.sin((180 / FIELD_WIDTH) 
+					* Math.PI / 180));
 	final float UNIT_OF_DELTA_Y = CELL_LENGTH / CELL_WIDTH;
-	final float[] startPos = {150f, 0f, -50f};
-	double[][] changes;
-	
+	final float[] startPos = {20f, 10f, -10f};
+	final float RADIUS = radius + CELL_LENGTH / 2;
+			
 	int score = 0;
 	float deltay = UNIT_OF_DELTA_Y;
 	float y = 0;
-	float[] pos = {10f, -9f, 0f};
-	
+	float[] pos = {20f, 0f, -10f};
 	
 	public PerspectiveCamera cam;
 	public CameraInputController camController; //it will be deleted
@@ -71,18 +73,6 @@ public class MyGdxGame extends InputAdapter implements ApplicationListener{
 
 	 @Override
 	 public void create() {
-		 
-	  changes = new double[FIELD_WIDTH][3];
-	  for (int i = 0; i < 3; i++){
-		  changes[0][i] = 0;
-	  }
-	  for (int i = 1; i < FIELD_WIDTH; i++){
-		  changes[i][0] = changes[i - 1][0] + CELL_LENGTH * Math.cos(changes[i - 1][2]);
-		  changes[i][1] = changes[i - 1][1] + CELL_LENGTH * Math.sin(changes[i - 1][2]);
-		  changes[i][2] = changes[i - 1][2] + 180 - 180 * (FIELD_WIDTH - 2) / FIELD_WIDTH;
-	  }
-	  
-	  
 	  cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	  cam.position.set(startPos[0], startPos[1], startPos[2]);
 	  cam.lookAt(0, 0, 0);
@@ -99,7 +89,8 @@ public class MyGdxGame extends InputAdapter implements ApplicationListener{
 	  
 	  environment = new Environment();
 	  environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
-	  environment.add(new DirectionalLight().set(0.8f, 0.8f, 0.8f, 10f, 10f, 20f));
+	  environment.add(new DirectionalLight().set(0.4f, 0.4f, 0.4f, 20f, 20f, 0f));
+	  environment.add(new DirectionalLight().set(0.2f, 0.2f, 0.2f, 20f, -20f, 0f));
 	  
 	  showScore = new Label(" ", new Label.LabelStyle(new BitmapFont(), Color.WHITE));
       
@@ -111,7 +102,7 @@ public class MyGdxGame extends InputAdapter implements ApplicationListener{
 			  VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 	  block = builder.createBox(CELL_LENGTH, CELL_LENGTH, CELL_LENGTH, barrierMaterial, 
 			  VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-	  tetrahedron = builder.createCone(CELL_LENGTH, CELL_LENGTH, CELL_LENGTH, 4, tetrahedronMaterial,
+	  tetrahedron = builder.createCone(CELL_LENGTH, CELL_LENGTH, CELL_LENGTH, 3, tetrahedronMaterial,
 			  VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 	  tubeBlock = builder.createBox(CELL_LENGTH, CELL_LENGTH, CELL_LENGTH, tubeMaterial, 
 			  VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
@@ -120,8 +111,16 @@ public class MyGdxGame extends InputAdapter implements ApplicationListener{
 	  tube = new ModelInstance[ROWS + 1][FIELD_WIDTH];
 	  for (int i = 0; i < ROWS + 1; i++){
 		  for (int j = 0; j < FIELD_WIDTH; j++){
-			  tube[i][j] = new ModelInstance(tubeBlock, (float)changes[j][0], CELL_LENGTH * i, (float)changes[j][1]);
-			  tube[i][j].transform.setToRotation(Vector3.X, -1 * (float) changes[j][2]);
+			  tube[i][j] = new ModelInstance(tubeBlock, 0f, 0f, 0f);
+			  tube[i][j].transform.setToRotation(Vector3.X, 360 / FIELD_WIDTH * j);
+			  /*tube[i][j].transform.setTranslation(0f, (float) (changes[j][1] -
+					  CELL_LENGTH / 2 * Math.sin((90 > changes[j][2] ? 90 - 
+							  changes[j][2]: 270 - changes[j][2]) * Math.PI / 180)), 
+					  (float) (changes[j][0] + CELL_LENGTH / 2 / Math.sin((changes[j][2])*/
+			  tube[i][j].transform.setTranslation(-1 * CELL_LENGTH * i, (float)(RADIUS * Math.cos(360 /
+					  FIELD_WIDTH * j * Math.PI / 180)), (float)(RADIUS * Math.sin(360 /
+							  FIELD_WIDTH * j * Math.PI / 180)));
+			 // tube[i][j].transform.setTranslation(0f, 0f, CELL_LENGTH * j);
 		  }
 	  }
 	 }
@@ -141,6 +140,7 @@ public class MyGdxGame extends InputAdapter implements ApplicationListener{
 	  }*/
 		 
 	  Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+	  Gdx.gl.glClearColor(0, (float) 0.4, 0, (float) 0.5);
 	  Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 	  //it will be deleted
 	  camController.update();
@@ -177,16 +177,16 @@ public class MyGdxGame extends InputAdapter implements ApplicationListener{
 		for (int i = 0; i < FIELD_WIDTH / 2; i++){
 			Pair<Model, Model> pair = generateNewPair();
 			if (pair.first != null){
-				gamefield[ROWS][i] = new ModelInstance(pair.first,
+				/*gamefield[ROWS][i] = new ModelInstance(pair.first,
 						(float)changes[i][0], score, (float)changes[i][1]);
-				gamefield[ROWS][i].transform.setToRotation(Vector3.X, (float)changes[i][2]);
+				gamefield[ROWS][i].transform.setToRotation(Vector3.X, (float)changes[i][2]);*/
 			} else{
 				gamefield[ROWS][i] = null;
 			}
 			if (pair.second != null){
-				gamefield[ROWS][FIELD_WIDTH - i - 1] = new ModelInstance(pair.second, 
+				/*gamefield[ROWS][FIELD_WIDTH - i - 1] = new ModelInstance(pair.second, 
 						(float)changes[FIELD_WIDTH - i - 1][0], score,
-						(float)changes[FIELD_WIDTH - i - 1][1]);
+						(float)changes[FIELD_WIDTH - i - 1][1]);*/
 				
 			} else{
 				gamefield[ROWS][FIELD_WIDTH - i - 1] = null;
